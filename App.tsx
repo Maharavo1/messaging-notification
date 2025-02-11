@@ -28,6 +28,9 @@ function buildDeepLinkFromNotificationData(data:any): string | null {
     return null;
   }
   if (navigationId === "home") {
+    
+
+
     return 'myapp://home';
   }
   if (navigationId === "settings") {
