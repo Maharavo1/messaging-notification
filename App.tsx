@@ -13,7 +13,7 @@ import { Linking, ActivityIndicator } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import Home from './components/Home';
-import Setting from './components/Setting';
+import Setting from './components/Setting'
 
 //import './services/servcie'
 import firebase from '@react-native-firebase/app';
