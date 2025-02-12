@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1022353806047",
+    "project_id": "messaging-project-793ae",
+    "storage_bucket": "messaging-project-793ae.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1022353806047:android:fb45e7761a99bbbd0bcf6a",
+        "android_client_info": {
+          "package_name": "com.notification"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCQuBjMxJnjhFAjNIkWMdiYTJH1uRlg8lk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

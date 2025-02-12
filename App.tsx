@@ -1,3 +1,13 @@
+import { ActivityIndicator, PermissionsAndroid } from 'react-native';
+
+/**
+ * Sample React Native App
+ * https://github.com/facebook/react-native
+ *
+ * @format
+ */
+
+
 import React, { useEffect } from 'react';
 import { ActivityIndicator, PermissionsAndroid } from 'react-native';
 import messaging from '@react-native-firebase/messaging';
@@ -7,6 +17,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import Home from './components/Home';
 import Setting from './components/Setting';
+
 
 const Stack = createStackNavigator();
 const NAVIGATION_IDS = ['home', 'settings'];
@@ -19,6 +30,19 @@ function buildDeepLinkFromNotificationData(data: Record<string, any>): string | 
     console.warn('Unverified navigationId:', navigationId);
     return null;
   }
+
+  if (navigationId === "home") {
+    
+
+
+    return 'myapp://home';
+  }
+  if (navigationId === "settings") {
+    return 'myapp://settings';
+  }
+  
+  return null
+}
 
   return `myapp://${navigationId}`;
 }
