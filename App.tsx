@@ -1,3 +1,4 @@
+import { ActivityIndicator, PermissionsAndroid } from 'react-native';
 
 /**
  * Sample React Native App
@@ -6,29 +7,30 @@
  * @format
  */
 
-import React, {  useEffect } from 'react';
+
+import React, { useEffect } from 'react';
+import { ActivityIndicator, PermissionsAndroid } from 'react-native';
 import messaging from '@react-native-firebase/messaging';
-import {PermissionsAndroid} from 'react-native';
-import { Linking, ActivityIndicator } from 'react-native';
+import notifee, { AndroidImportance } from '@notifee/react-native';
+import { Linking } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import Home from './components/Home';
-import Setting from './components/Setting'
+import Setting from './components/Setting';
 
-//import './services/servcie'
-import firebase from '@react-native-firebase/app';
-import { getApp, initializeApp } from '@react-native-firebase/app';
 
 const Stack = createStackNavigator();
-const NAVIGATION_IDS = ["home", "settings"];
-const app = getApp(); 
+const NAVIGATION_IDS = ['home', 'settings'];
 
-function buildDeepLinkFromNotificationData(data:any): string | null {
+function buildDeepLinkFromNotificationData(data: Record<string, any>): string | null {
   const navigationId = data?.navigationId;
+  console.log('Notification data:', data);
+
   if (!NAVIGATION_IDS.includes(navigationId)) {
-    console.warn('Unverified navigationId', navigationId)
+    console.warn('Unverified navigationId:', navigationId);
     return null;
   }
+
   if (navigationId === "home") {
     
 
@@ -42,78 +44,109 @@ function buildDeepLinkFromNotificationData(data:any): string | null {
   return null
 }
 
+  return `myapp://${navigationId}`;
+}
 
 const linking = {
   prefixes: ['myapp://'],
   config: {
     screens: {
-      Home: "home",
-      Settings: "settings"
-    }
+      Home: 'home',
+      Settings: 'settings',
+    },
   },
-  async getInitialURL() {
-    const url = await Linking.getInitialURL();
-    if (typeof url === 'string') {
-      return url;
+  async getInitialURL(): Promise<string | null> {
+    try {
+      const url = await Linking.getInitialURL();
+      if (url) {
+        return url;
+      }
+
+      const message = await messaging().getInitialNotification();
+      if (message?.data) {
+        const deeplinkURL = buildDeepLinkFromNotificationData(message.data);
+        if (deeplinkURL) {
+          return deeplinkURL;
+        }
+      }
+    } catch (error) {
+      console.error('Error in getInitialURL:', error);
     }
 
-    const message = await messaging().getInitialNotification();
-    const deeplinkURL = buildDeepLinkFromNotificationData(message?.data);
-    if (typeof deeplinkURL === 'string') {
-      return deeplinkURL;
-    }
+    return null;
   },
   subscribe(listener: (url: string) => void) {
-    const onReceiveURL = ({url}: {url: string}) => listener(url);
+    const onReceiveURL = ({ url }: { url: string }) => listener(url);
 
     const linkingSubscription = Linking.addEventListener('url', onReceiveURL);
-    messaging().setBackgroundMessageHandler(async remoteMessage => {
-      console.log('Message handled in the background!', remoteMessage);
+
+    const foregroundNotification = messaging().onMessage(async (remoteMessage) => {
+      console.log('Foreground FCM message received:', remoteMessage);
+
+      await notifee.displayNotification({
+        title: remoteMessage.notification?.title || 'Notification',
+        body: remoteMessage.notification?.body || 'You have a new message.',
+        android: {
+          channelId: 'default',
+          importance: AndroidImportance.HIGH,
+        },
+      });
     });
 
-    const foreground = messaging().onMessage(async remoteMessage => {
-      console.log('A new FCM message arrived!', remoteMessage);
-
-    });
-    const unsubscribe = messaging().onNotificationOpenedApp(remoteMessage => {
-      const url = buildDeepLinkFromNotificationData(remoteMessage.data)
-      if (typeof url === 'string') {
-        listener(url)
+    const unsubscribeNotification = messaging().onNotificationOpenedApp((remoteMessage) => {
+      const url = buildDeepLinkFromNotificationData(remoteMessage?.data || {});
+      if (url) {
+        listener(url);
       }
     });
 
     return () => {
       linkingSubscription.remove();
-      unsubscribe();
-      foreground();
+      unsubscribeNotification();
+      foregroundNotification();
     };
   },
-}
+};
+
 function App(): React.JSX.Element {
-  useEffect(()=>{
-   const requestUserPermission = async () => {
-     PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS);
-    const authStatus = await messaging().requestPermission();
-    const enabled =
-      authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
-      authStatus === messaging.AuthorizationStatus.PROVISIONAL;
+  useEffect(() => {
+    const requestUserPermission = async () => {
+      await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS);
 
-    if (enabled) {
-      console.log('Authorization status:', authStatus);
-      const token = await messaging().getToken();
-      console.log('FCM token:', token);
-    }
-  };
+      const authStatus = await messaging().requestPermission();
+      const isEnabled =
+        authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
+        authStatus === messaging.AuthorizationStatus.PROVISIONAL;
 
-  requestUserPermission();
-  },[])
+      if (isEnabled) {
+        console.log('Notification permissions granted:', authStatus);
+        const token = await messaging().getToken();
+        console.log('FCM token:', token);
+      } else {
+        console.warn('Notification permissions not granted.');
+      }
+    };
 
- return (
-   <NavigationContainer linking={linking} fallback={<ActivityIndicator animating />}>
-   <Stack.Navigator initialRouteName='Home'>
-     <Stack.Screen name="Home" component={Home} />
-     <Stack.Screen name="Settings" component={Setting} />
-   </Stack.Navigator>
- </NavigationContainer>
- );
+    const createNotificationChannel = async () => {
+      await notifee.createChannel({
+        id: 'default',
+        name: 'Default Channel',
+        importance: AndroidImportance.HIGH,
+      });
+    };
+
+    requestUserPermission();
+    createNotificationChannel();
+  }, []);
+
+  return (
+    <NavigationContainer linking={linking} fallback={<ActivityIndicator animating />}>
+      <Stack.Navigator initialRouteName="Home">
+        <Stack.Screen name="Home" component={Home} />
+        <Stack.Screen name="Settings" component={Setting} />
+      </Stack.Navigator>
+    </NavigationContainer>
+  );
 }
+
+export default App;
